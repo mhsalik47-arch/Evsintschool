@@ -1,6 +1,13 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+
+// CRITICAL: Global process shim for browser environment
+// This must run before any other imports
+if (typeof (window as any).process === 'undefined') {
+  (window as any).process = { env: {} };
+}
+
 import App from './App';
 
 const rootElement = document.getElementById('root');

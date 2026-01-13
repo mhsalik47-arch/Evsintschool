@@ -1,56 +1,37 @@
 
-import React, { useState } from 'react';
-import { AppProvider, useApp } from './store';
-import Layout from './components/Layout';
-import Dashboard from './components/Dashboard';
-import Finance from './components/Finance';
-import Labour from './components/Labour';
-import Settings from './components/Settings';
-import Login from './components/Login';
+import React from 'react';
+import ReactDOM from 'react-dom/client';
 
-const AppContent: React.FC = () => {
-  const { auth } = useApp();
-  const [activeTab, setActiveTab] = useState('dashboard');
+// CRITICAL: Global process shim for browser environment
+// This must run before any other imports
+if (typeof (window as any).process === 'undefined') {
+  (window as any).process = { env: {} };
+}
 
-  if (!auth.isLoggedIn) {
-    return <Login />;
-  }
+import App from './App';
 
-  const renderContent = () => {
-    try {
-      switch (activeTab) {
-        case 'dashboard':
-          return <Dashboard />;
-        case 'finance':
-          return <Finance />;
-        case 'labour':
-          return <Labour />;
-        case 'settings':
-          return <Settings />;
-        default:
-          return <Dashboard />;
-      }
-    } catch (err) {
-      console.error("Render Error:", err);
-      return <div className="p-10 text-center font-bold text-red-500">Something went wrong. Please reload the app.</div>;
-    }
-  };
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error("Could not find root element to mount to");
+}
 
-  return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
-      <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-        {renderContent()}
-      </div>
-    </Layout>
-  );
-};
+const root = ReactDOM.createRoot(rootElement);
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
 
-const App: React.FC = () => {
-  return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
-  );
-};
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(registration => {
+        console.log('SW registered: ', registration);
+      })
+      .catch(registrationError => {
+        console.log('SW registration failed: ', registrationError);
+      });
+  });
+}
 
-export default App;

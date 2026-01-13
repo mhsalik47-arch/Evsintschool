@@ -1,14 +1,18 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useApp } from '../store';
 import { translations } from '../translations';
-import { Trash2, Languages, School, List, Save, Camera, X } from 'lucide-react';
+import { Trash2, Languages, School, List, Save, Camera, X, Database, RefreshCw } from 'lucide-react';
 import { ExpenseCategory } from '../types';
 
 const SettingsComponent: React.FC = () => {
-  const { settings, setSettings, setIncomes, setExpenses, setLabours, setAttendance, setPayments } = useApp();
+  const { settings, setSettings, setIncomes, setExpenses, setLabours, setAttendance, setPayments, supabaseConfig, saveSupabaseConfig } = useApp();
   const t = translations[settings.language];
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [showDbConfig, setShowDbConfig] = useState(false);
+  const [tempUrl, setTempUrl] = useState(supabaseConfig.url);
+  const [tempKey, setTempKey] = useState(supabaseConfig.key);
 
   const handleReset = () => {
     if (window.confirm("सावधानी: यह सारा डेटा हमेशा के लिए हटा देगा। क्या आप वाकई ऐसा करना चाहते हैं?")) {
@@ -41,7 +45,6 @@ const SettingsComponent: React.FC = () => {
     if (isNaN(numericVal)) numericVal = 0;
     
     const newCategoryBudgets = { ...settings.categoryBudgets, [cat]: numericVal };
-    // Explicitly type sum as number to prevent unknown type error
     const newTotal = Object.values(newCategoryBudgets).reduce((sum: number, v) => sum + (v as number), 0);
     setSettings({ ...settings, categoryBudgets: newCategoryBudgets, estimatedBudget: newTotal });
   };
@@ -115,6 +118,47 @@ const SettingsComponent: React.FC = () => {
         </div>
       </div>
 
+      {/* Database Setup Section (New) */}
+      <div className="bg-white rounded-[40px] p-8 shadow-sm border border-slate-100">
+        <button 
+          onClick={() => setShowDbConfig(!showDbConfig)}
+          className="w-full flex items-center justify-between"
+        >
+           <h3 className="text-xl font-black flex items-center gap-3 text-slate-800">
+                <Database className="text-purple-600" size={24} />
+                Database Setup
+            </h3>
+            <div className={`transition-transform ${showDbConfig ? 'rotate-180' : ''}`}>
+               <X size={20} className="text-slate-300" />
+            </div>
+        </button>
+
+        {showDbConfig && (
+          <div className="mt-8 space-y-6 animate-in fade-in duration-300">
+            <div>
+              <label className="text-[10px] font-black text-slate-400 mb-2 block uppercase tracking-widest">Supabase URL</label>
+              <input 
+                type="text" value={tempUrl} onChange={(e) => setTempUrl(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-100 rounded-3xl p-4 font-bold outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-slate-400 mb-2 block uppercase tracking-widest">Anon Key</label>
+              <textarea 
+                value={tempKey} onChange={(e) => setTempKey(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-100 rounded-3xl p-4 font-bold outline-none h-24 text-[10px]"
+              />
+            </div>
+            <button 
+              onClick={() => saveSupabaseConfig(tempUrl, tempKey)}
+              className="w-full bg-purple-600 text-white font-black py-4 rounded-3xl shadow-xl flex items-center justify-center gap-2 active:scale-95"
+            >
+              <RefreshCw size={18} /> Update Connection
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Budget Configuration */}
       <div className="bg-white rounded-[40px] p-8 shadow-sm border border-slate-100">
         <div className="flex justify-between items-center mb-8">
@@ -148,18 +192,6 @@ const SettingsComponent: React.FC = () => {
             </div>
           ))}
         </div>
-        
-        <div className="mt-8 p-6 bg-slate-900 rounded-[32px] text-white">
-            <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center">
-                    <Save size={24} className="text-blue-400" />
-                </div>
-                <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Overall Project Cap</p>
-                    <p className="text-2xl font-black">₹{(settings.estimatedBudget || 0).toLocaleString()}</p>
-                </div>
-            </div>
-        </div>
       </div>
 
       {/* Global Actions */}
@@ -188,3 +220,4 @@ const SettingsComponent: React.FC = () => {
 };
 
 export default SettingsComponent;
+

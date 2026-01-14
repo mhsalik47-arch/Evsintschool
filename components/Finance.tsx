@@ -37,7 +37,7 @@ const Finance: React.FC = () => {
         amount: numAmt,
         date,
         category: activeSubTab === 'food' ? 'Food' : category,
-        subCategory,
+        subCategory: activeSubTab === 'food' ? 'Other' : subCategory,
         itemDetail: itemDetail !== 'None' ? itemDetail : undefined,
         paidTo: paidTo || 'Vendor',
         mode,
@@ -56,6 +56,7 @@ const Finance: React.FC = () => {
   };
 
   const categories: ExpenseCategory[] = ['Masonry', 'Plumbing', 'Paint', 'Furniture', 'Electric', 'Material', 'Transport', 'Food', 'Other'];
+  const subCategories: ExpenseSubCategory[] = ['Karigar', 'Majdoor', 'Material', 'Vendor', 'Other'];
   const materialItems = ['Cement', 'Sand', 'Gravel', 'CrushedSand', 'Steel', 'Bricks', 'None'];
   const foodItems = ['Tea', 'Snacks', 'Lunch', 'Water', 'Other'];
 
@@ -129,7 +130,6 @@ const Finance: React.FC = () => {
             ))}
           </div>
         ))}
-        {/* Placeholder for other tabs logic... */}
       </div>
 
       {showModal && (
@@ -137,26 +137,34 @@ const Finance: React.FC = () => {
           <div className="bg-white w-full max-w-md rounded-[40px] p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-black text-slate-800">नया डेटा जोड़ें</h3>
-              <button onClick={resetForm} className="w-10 h-10 bg-slate-100 rounded-full">✕</button>
+              <button onClick={resetForm} className="w-10 h-10 bg-slate-100 rounded-full text-slate-400">✕</button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase">रकम (Amount)</label>
+                <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase tracking-widest">रकम (Amount)</label>
                 <input type="number" value={amount === '0' ? '' : amount} onChange={(e) => setAmount(e.target.value)} 
-                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xl font-black outline-none" placeholder="0" />
+                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xl font-black outline-none focus:ring-2 focus:ring-blue-100" placeholder="0" />
               </div>
 
               {activeSubTab === 'expense' && (
                 <>
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase">श्रेणी (Category)</label>
+                    <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase tracking-widest">श्रेणी (Category)</label>
                     <select value={category} onChange={(e) => setCategory(e.target.value as any)} className="w-full bg-slate-50 p-4 rounded-2xl font-bold border-none outline-none">
                       {categories.map(c => <option key={c} value={c}>{(t as any).categories[c]}</option>)}
                     </select>
                   </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase tracking-widest">उप-श्रेणी (Sub-category)</label>
+                    <select value={subCategory} onChange={(e) => setSubCategory(e.target.value as any)} className="w-full bg-slate-50 p-4 rounded-2xl font-bold border-none outline-none">
+                      {subCategories.map(sc => <option key={sc} value={sc}>{(t as any).subCategories[sc]}</option>)}
+                    </select>
+                  </div>
+
                   {category === 'Material' && (
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase">सामान (Material Item)</label>
+                      <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase tracking-widest">सामान (Material Item)</label>
                       <select value={itemDetail} onChange={(e) => setItemDetail(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl font-bold border-none outline-none">
                         {materialItems.map(m => <option key={m} value={m}>{(t as any).items[m] || m}</option>)}
                       </select>
@@ -167,7 +175,7 @@ const Finance: React.FC = () => {
 
               {activeSubTab === 'food' && (
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase">विवरण (Food Item)</label>
+                  <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase tracking-widest">विवरण (Food Item)</label>
                   <select value={itemDetail} onChange={(e) => setItemDetail(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl font-bold border-none outline-none">
                     {foodItems.map(f => <option key={f} value={f}>{(t as any).foodItems[f] || f}</option>)}
                   </select>
@@ -175,17 +183,22 @@ const Finance: React.FC = () => {
               )}
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase">{activeSubTab === 'income' ? 'किसने दिया' : 'किसे दिया'}</label>
+                <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase tracking-widest">{activeSubTab === 'income' ? 'किसने दिया' : 'किसे दिया'}</label>
                 {activeSubTab === 'income' ? (
                   <select value={paidBy} onChange={(e) => setPaidBy(e.target.value as any)} className="w-full bg-slate-50 p-4 rounded-2xl font-bold border-none outline-none">
                     <option value="Master Muzahir">Master Muzahir</option><option value="Dr. Salik">Dr. Salik</option><option value="Other">Other</option>
                   </select>
                 ) : (
-                  <input type="text" value={paidTo} onChange={(e) => setPaidTo(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl font-bold border-none outline-none" placeholder="वेंडर का नाम" />
+                  <input type="text" value={paidTo} onChange={(e) => setPaidTo(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl font-bold border-none outline-none" placeholder="वेंडर या व्यक्ति का नाम" />
                 )}
               </div>
 
-              <button onClick={handleSave} className="w-full primary-bg text-white font-black py-4 rounded-2xl shadow-xl mt-4">सेव करें (Save)</button>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 mb-1 block uppercase tracking-widest">विवरण/नोट्स (Notes)</label>
+                <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} className="w-full bg-slate-50 p-4 rounded-2xl font-bold border-none outline-none h-20" placeholder="कुछ जानकारी..." />
+              </div>
+
+              <button onClick={handleSave} className="w-full primary-bg text-white font-black py-4 rounded-2xl shadow-xl mt-4 active:scale-95 transition-transform">सेव करें (Save)</button>
             </div>
           </div>
         </div>

@@ -48,43 +48,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const triggerSync = async (isPush: boolean = false) => {
-    if (!supabase) {
-        console.error("Supabase config missing!");
-        return;
-    }
-    if (!navigator.onLine) {
-        console.warn("Offline: Cannot sync with database");
-        return;
-    }
+    if (!supabase) return;
+    if (!navigator.onLine) return;
     
     setIsSyncing(true);
-    console.log(`Starting ${isPush ? 'PUSH' : 'PULL'} sync...`);
-
     try {
       if (isPush) {
-        // Push local changes to Supabase individually to catch specific table errors
-        const syncPromises = [
-          supabase.from('incomes').upsert(incomes).then(res => ({ table: 'incomes', ...res })),
-          supabase.from('expenses').upsert(expenses).then(res => ({ table: 'expenses', ...res })),
-          supabase.from('labours').upsert(labours).then(res => ({ table: 'labours', ...res })),
-          supabase.from('attendance').upsert(attendance).then(res => ({ table: 'attendance', ...res })),
-          supabase.from('payments').upsert(payments).then(res => ({ table: 'payments', ...res })),
-          supabase.from('settings').upsert([{ id: 'global', ...settings }]).then(res => ({ table: 'settings', ...res }))
+        const tablesToSync = [
+            { name: 'incomes', data: incomes },
+            { name: 'expenses', data: expenses },
+            { name: 'labours', data: labours },
+            { name: 'attendance', data: attendance },
+            { name: 'payments', data: payments },
+            { name: 'settings', data: [{ id: 'global', ...settings }] }
         ];
 
-        const results = await Promise.all(syncPromises);
-        
-        results.forEach(res => {
-          if (res.error) {
-            console.error(`Sync Error in table [${res.table}]:`, res.error.message, res.error.details);
-          } else {
-            console.log(`Sync Success for table [${res.table}]`);
-          }
-        });
-
+        for (const table of tablesToSync) {
+            if (table.data.length === 0 && table.name !== 'settings') continue;
+            
+            const { error } = await supabase.from(table.name).upsert(table.data);
+            if (error) {
+                console.warn(`Could not sync ${table.name}:`, error.message);
+                if (error.code === '42P01') {
+                   // Table doesn't exist, we skip but inform
+                   console.error(`Table ${table.name} is missing from Database.`);
+                }
+            }
+        }
       } else {
-        // Pull latest from Supabase
-        const [inc, exp, lab, att, pay, set] = await Promise.all([
+        const [inc, exp, lab, att, pay, set] = await Promise.allSettled([
           supabase.from('incomes').select('*'),
           supabase.from('expenses').select('*'),
           supabase.from('labours').select('*'),
@@ -93,22 +85,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           supabase.from('settings').select('*').eq('id', 'global').single()
         ]);
 
-        if (inc.data) setIncomes(inc.data);
-        if (exp.data) setExpenses(exp.data);
-        if (lab.data) setLabours(lab.data);
-        if (att.data) setAttendance(att.data);
-        if (pay.data) setPayments(pay.data);
-        if (set.data) {
-            const { id, ...cleanSettings } = set.data;
+        const getData = (res: any) => res.status === 'fulfilled' && !res.value.error ? res.value.data : null;
+
+        const incData = getData(inc);
+        const expData = getData(exp);
+        const labData = getData(lab);
+        const attData = getData(att);
+        const payData = getData(pay);
+        const setData = getData(set);
+
+        if (incData) setIncomes(incData);
+        if (expData) setExpenses(expData);
+        if (labData) setLabours(labData);
+        if (attData) setAttendance(attData);
+        if (payData) setPayments(payData);
+        if (setData) {
+            const { id, ...cleanSettings } = setData;
             setSettings(cleanSettings);
         }
-        console.log("Pull sync completed successfully");
       }
 
       const now = new Date().toISOString();
       setLastSyncTime(now);
       localStorage.setItem('ss_lastSyncTime', now);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Global Sync Error:", error);
     } finally {
       setIsSyncing(false);
@@ -152,5 +152,6 @@ export const useApp = () => {
   if (!context) throw new Error('useApp must be used within AppProvider');
   return context;
 };
+
 
 

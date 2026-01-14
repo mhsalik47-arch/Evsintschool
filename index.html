@@ -11,10 +11,10 @@
     <style>
         body { font-family: 'Inter', 'Noto Sans Devanagari', sans-serif; background-color: #f8fafc; margin: 0; overflow-x: hidden; }
         #root { min-height: 100vh; }
-        #critical-error {
-            display: none; position: fixed; inset: 0; background: white; z-index: 9999;
-            padding: 2rem; flex-direction: column; align-items: center; justify-content: center; text-align: center;
-        }
+        .primary-bg { background-color: #1e3a8a !important; }
+        .primary-text { color: #1e3a8a !important; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .loader-spin { width: 40px; height: 40px; border: 4px solid #f3f4f6; border-top: 4px solid #1e3a8a; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -34,21 +34,12 @@
 </script>
 </head>
 <body>
-    <div id="critical-error">
-        <div style="background:#fee2e2; color:#b91c1c; padding:2rem; border-radius:2rem; border:2px solid #fecaca; max-width:90%;">
-            <h2 style="font-weight:900; margin-bottom:1rem;">सिस्टम एरर!</h2>
-            <p id="error-details" style="font-family:monospace; font-size:12px; background:white; padding:1rem; border-radius:1rem; text-align:left; overflow-auto; max-height:200px;"></p>
-            <button onclick="location.reload()" style="margin-top:1.5rem; background:#b91c1c; color:white; border:none; padding:1rem 2rem; border-radius:1rem; font-weight:bold;">App Reload करें</button>
-        </div>
-    </div>
-
     <div id="root">
         <div style="display:flex; height:100vh; flex-direction:column; align-items:center; justify-content:center; color:#1e3a8a;">
             <div class="loader-spin"></div>
-            <p style="margin-top:1.5rem; font-weight:900; letter-spacing:1px; text-transform:uppercase; font-size:12px;">Shiksha Setu Loading...</p>
+            <p style="margin-top:1.5rem; font-weight:900; font-size:12px;">शिक्षा सेतु लोड हो रहा है...</p>
         </div>
     </div>
-
     <script type="module" src="./index.tsx"></script>
 </body>
 </html>

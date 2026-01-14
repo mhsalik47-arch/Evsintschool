@@ -22,7 +22,7 @@ interface AppContextType {
   incomes: Income[]; expenses: Expense[]; labours: Labour[]; attendance: Attendance[]; payments: LabourPayment[];
   settings: Settings; auth: AuthState; supabaseConfig: { url: string; key: string };
   setIncomes: any; setExpenses: any; setLabours: any; setAttendance: any; setPayments: any; setSettings: any; setAuth: any;
-  isOnline: boolean; isSyncing: boolean; triggerSync: (isPush?: boolean) => void; saveSupabaseConfig: any;
+  isOnline: boolean; isSyncing: boolean; triggerSync: (isPush?: boolean) => Promise<void>; saveSupabaseConfig: any;
   lastSyncTime: string | null;
 }
 
@@ -48,24 +48,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const triggerSync = async (isPush: boolean = false) => {
-    if (!supabase || !navigator.onLine) return;
+    if (!supabase || !navigator.onLine) {
+        console.log("Sync skipped: No Supabase config or offline");
+        return;
+    }
+    
     setIsSyncing(true);
-    setTimeout(() => {
-      setIsSyncing(false);
+    try {
+      if (isPush) {
+        // Push local changes to Supabase
+        await Promise.all([
+          supabase.from('incomes').upsert(incomes),
+          supabase.from('expenses').upsert(expenses),
+          supabase.from('labours').upsert(labours),
+          supabase.from('attendance').upsert(attendance),
+          supabase.from('payments').upsert(payments),
+          supabase.from('settings').upsert([{ id: 'global', ...settings }])
+        ]);
+      } else {
+        // Pull latest from Supabase
+        const [inc, exp, lab, att, pay, set] = await Promise.all([
+          supabase.from('incomes').select('*'),
+          supabase.from('expenses').select('*'),
+          supabase.from('labours').select('*'),
+          supabase.from('attendance').select('*'),
+          supabase.from('payments').select('*'),
+          supabase.from('settings').select('*').eq('id', 'global').single()
+        ]);
+
+        if (inc.data) setIncomes(inc.data);
+        if (exp.data) setExpenses(exp.data);
+        if (lab.data) setLabours(lab.data);
+        if (att.data) setAttendance(att.data);
+        if (pay.data) setPayments(pay.data);
+        if (set.data) {
+            const { id, ...cleanSettings } = set.data;
+            setSettings(cleanSettings);
+        }
+      }
+
       const now = new Date().toISOString();
       setLastSyncTime(now);
       localStorage.setItem('ss_lastSyncTime', now);
-    }, 1000);
+    } catch (error) {
+      console.error("Sync Error:", error);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
+  // Sync online status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Persist to local storage whenever state changes
   useEffect(() => {
     localStorage.setItem('ss_incomes', JSON.stringify(incomes));
     localStorage.setItem('ss_expenses', JSON.stringify(expenses));
     localStorage.setItem('ss_labours', JSON.stringify(labours));
     localStorage.setItem('ss_attendance', JSON.stringify(attendance));
+    localStorage.setItem('ss_payments', JSON.stringify(payments));
     localStorage.setItem('ss_settings', JSON.stringify(settings));
     localStorage.setItem('ss_auth', JSON.stringify(auth));
-  }, [incomes, expenses, labours, attendance, settings, auth]);
+  }, [incomes, expenses, labours, attendance, payments, settings, auth]);
 
   return (
     <AppContext.Provider value={{
@@ -83,3 +136,4 @@ export const useApp = () => {
   if (!context) throw new Error('useApp must be used within AppProvider');
   return context;
 };
+

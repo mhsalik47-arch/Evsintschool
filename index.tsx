@@ -7,6 +7,17 @@ if (!(window as any).process) {
   (window as any).process = { env: {} };
 }
 
+// Service Worker Registration for PWA functionality
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(registration => {
+      console.log('SW registered: ', registration);
+    }).catch(registrationError => {
+      console.log('SW registration failed: ', registrationError);
+    });
+  });
+}
+
 const container = document.getElementById('root');
 if (container) {
   const root = ReactDOM.createRoot(container);

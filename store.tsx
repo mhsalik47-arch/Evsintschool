@@ -48,23 +48,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const triggerSync = async (isPush: boolean = false) => {
-    if (!supabase || !navigator.onLine) {
-        console.log("Sync skipped: No Supabase config or offline");
+    if (!supabase) {
+        console.error("Supabase config missing!");
+        return;
+    }
+    if (!navigator.onLine) {
+        console.warn("Offline: Cannot sync with database");
         return;
     }
     
     setIsSyncing(true);
+    console.log(`Starting ${isPush ? 'PUSH' : 'PULL'} sync...`);
+
     try {
       if (isPush) {
-        // Push local changes to Supabase
-        await Promise.all([
-          supabase.from('incomes').upsert(incomes),
-          supabase.from('expenses').upsert(expenses),
-          supabase.from('labours').upsert(labours),
-          supabase.from('attendance').upsert(attendance),
-          supabase.from('payments').upsert(payments),
-          supabase.from('settings').upsert([{ id: 'global', ...settings }])
-        ]);
+        // Push local changes to Supabase individually to catch specific table errors
+        const syncPromises = [
+          supabase.from('incomes').upsert(incomes).then(res => ({ table: 'incomes', ...res })),
+          supabase.from('expenses').upsert(expenses).then(res => ({ table: 'expenses', ...res })),
+          supabase.from('labours').upsert(labours).then(res => ({ table: 'labours', ...res })),
+          supabase.from('attendance').upsert(attendance).then(res => ({ table: 'attendance', ...res })),
+          supabase.from('payments').upsert(payments).then(res => ({ table: 'payments', ...res })),
+          supabase.from('settings').upsert([{ id: 'global', ...settings }]).then(res => ({ table: 'settings', ...res }))
+        ];
+
+        const results = await Promise.all(syncPromises);
+        
+        results.forEach(res => {
+          if (res.error) {
+            console.error(`Sync Error in table [${res.table}]:`, res.error.message, res.error.details);
+          } else {
+            console.log(`Sync Success for table [${res.table}]`);
+          }
+        });
+
       } else {
         // Pull latest from Supabase
         const [inc, exp, lab, att, pay, set] = await Promise.all([
@@ -85,19 +102,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const { id, ...cleanSettings } = set.data;
             setSettings(cleanSettings);
         }
+        console.log("Pull sync completed successfully");
       }
 
       const now = new Date().toISOString();
       setLastSyncTime(now);
       localStorage.setItem('ss_lastSyncTime', now);
     } catch (error) {
-      console.error("Sync Error:", error);
+      console.error("Global Sync Error:", error);
     } finally {
       setIsSyncing(false);
     }
   };
 
-  // Sync online status
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -109,7 +126,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // Persist to local storage whenever state changes
   useEffect(() => {
     localStorage.setItem('ss_incomes', JSON.stringify(incomes));
     localStorage.setItem('ss_expenses', JSON.stringify(expenses));
@@ -136,4 +152,5 @@ export const useApp = () => {
   if (!context) throw new Error('useApp must be used within AppProvider');
   return context;
 };
+
 
